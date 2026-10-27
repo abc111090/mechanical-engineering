@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>平面机构自由度计算器</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+    min-height: 100vh;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .card {
+    background: #ffffff;
+    width: 440px;
+    max-width: 100%;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    padding: 30px 32px;
+  }
+  h1 {
+    font-size: 22px;
+    color: #2c3e50;
+    margin: 0 0 6px;
+    text-align: center;
+  }
+  .subtitle {
+    text-align: center;
+    color: #7f8c8d;
+    font-size: 13px;
+    margin: 0 0 24px;
+  }
+  .field {
+    margin-bottom: 16px;
+  }
+  label {
+    display: block;
+    font-size: 14px;
+    color: #34495e;
+    margin-bottom: 6px;
+  }
+  label small { color: #95a5a6; font-weight: normal; }
+  input[type="number"] {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 16px;
+    border: 1px solid #ccd6dd;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  input[type="number"]:focus {
+    border-color: #4a90d9;
+    box-shadow: 0 0 0 3px rgba(74,144,217,0.15);
+  }
+  button {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #fff;
+    background: #4a90d9;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .2s;
+    margin-top: 4px;
+  }
+  button:hover { background: #357abd; }
+  button:active { background: #2d6aab; }
+  .formula {
+    text-align: center;
+    color: #7f8c8d;
+    font-size: 13px;
+    margin: 14px 0 4px;
+  }
+  /* 结果展示区 —— 醒目 */
+  .result {
+    margin-top: 16px;
+    padding: 18px 16px;
+    border-radius: 10px;
+    display: none;
+    border-left: 6px solid transparent;
+  }
+  .result.show { display: block; }
+
+  /* 正常计算结果 */
+  .result.ok {
+    background: #eef7ff;
+    border: 1px solid #a9d4f5;
+    border-left-color: #4a90d9;
+    color: #1a3e5c;
+  }
+  .result .bigF {
+    display: block;
+    font-size: 34px;
+    font-weight: bold;
+    color: #1a5fb4;
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+  .result .formula-line {
+    font-size: 14px;
+    color: #46607a;
+    margin-bottom: 10px;
+  }
+  .result .judge {
+    display: block;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 10px;
+    border-radius: 6px;
+    margin-top: 6px;
+  }
+  .judge.ok-motion { background: #eafaf1; color: #1e7e42; border: 1px solid #a3e4c1; }
+  .judge.warn-motion { background: #fff7e6; color: #b26a00; border: 1px solid #f5d9a8; }
+  .judge.no-motion { background: #fdecea; color: #c0392b; border: 1px solid #f5c6cb; }
+
+  /* 错误提示 */
+  .result.err {
+    background: #fdecea;
+    border: 1px solid #f5c6cb;
+    border-left-color: #e74c3c;
+    color: #c0392b;
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>平面机构自由度计算器</h1>
+    <p class="subtitle">Kutzbach–Grübler 公式</p>
+
+    <div class="field">
+      <label for="n">活动构件数 <small>n</small>（不含机架）</label>
+      <input type="number" id="n" min="0" step="1" placeholder="例如 5" value="5">
+    </div>
+    <div class="field">
+      <label for="pl">低副数 <small>P_L</small>（转动副、移动副）</label>
+      <input type="number" id="pl" min="0" step="1" placeholder="例如 7" value="7">
+    </div>
+    <div class="field">
+      <label for="ph">高副数 <small>P_H</small>（齿轮副、凸轮副）</label>
+      <input type="number" id="ph" min="0" step="1" placeholder="例如 0" value="0">
+    </div>
+    <div class="field">
+      <label for="w">原动件数 <small>W</small>（主动件数）</label>
+      <input type="number" id="w" min="0" step="1" placeholder="例如 1" value="1">
+    </div>
+
+    <button id="calcBtn" type="button">计算自由度 F</button>
+
+    <p class="formula">公式：F = 3n − 2P_L − P_H（n 为活动构件数，不含机架）</p>
+
+    <div id="result" class="result"></div>
+  </div>
+
+  <script>
+    (function () {
+      var nInput = document.getElementById('n');
+      var plInput = document.getElementById('pl');
+      var phInput = document.getElementById('ph');
+      var wInput = document.getElementById('w');
+      var btn = document.getElementById('calcBtn');
+      var result = document.getElementById('result');
+
+      function showError(msg) {
+        result.innerHTML = '⚠ ' + msg;
+        result.className = 'result show err';
+      }
+
+      function showResult(F, nv, plv, phv, wv) {
+        var html = '<span class="bigF">F = ' + F + '</span>';
+        html += '<span class="formula-line">3×' + nv + ' − 2×' + plv + ' − ' + phv + ' = ' + F + '</span>';
+
+        var judgeCls, judgeText;
+        if (F > 0) {
+          if (F === wv) {
+            judgeCls = 'ok-motion';
+            judgeText = '✓ 机构具有确定运动（F = 原动件数 = ' + wv + '）';
+          } else if (F > wv) {
+            judgeCls = 'warn-motion';
+            judgeText = '⚠ 机构运动不确定（F = ' + F + ' &gt; 原动件数 ' + wv + '，需增加原动件）';
+          } else {
+            judgeCls = 'warn-motion';
+            judgeText = '⚠ 原动件数过多（F = ' + F + ' &lt; 原动件数 ' + wv + '）';
+          }
+        } else {
+          judgeCls = 'no-motion';
+          judgeText = '✗ 机构不能运动（F ≤ 0）';
+        }
+
+        html += '<span class="judge ' + judgeCls + '">' + judgeText + '</span>';
+        result.innerHTML = html;
+        result.className = 'result show ok';
+      }
+
+      function calc() {
+        var n = nInput.value.trim();
+        var pl = plInput.value.trim();
+        var ph = phInput.value.trim();
+        var w = wInput.value.trim();
+
+        if (n === '' || pl === '' || ph === '' || w === '') {
+          showError('请完整填写四个参数');
+          return;
+        }
+
+        // 仅接受纯非负整数，拒绝科学计数法(如 1e2)、小数、负号
+        var intRe = /^\d+$/;
+        if (!intRe.test(n) || !intRe.test(pl) || !intRe.test(ph) || !intRe.test(w)) {
+          showError('请输入 0 及以上的整数');
+          return;
+        }
+
+        var nv = parseInt(n, 10);
+        var plv = parseInt(pl, 10);
+        var phv = parseInt(ph, 10);
+        var wv = parseInt(w, 10);
+
+        if (nv > 100)  { showError('构件数 n 过大（上限 100）'); return; }
+        if (plv > 200) { showError('低副数 P_L 过大（上限 200）'); return; }
+        if (phv > 50)  { showError('高副数 P_H 过大（上限 50）'); return; }
+        if (wv > 100)  { showError('原动件数 W 过大（上限 100）'); return; }
+
+        var F = 3 * nv - 2 * plv - phv;
+        showResult(F, nv, plv, phv, wv);
+      }
+
+      btn.addEventListener('click', calc);
+      [nInput, plInput, phInput, wInput].forEach(function (el) {
+        el.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') { calc(); }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
